@@ -15,8 +15,20 @@
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="masthead">
-  <a class="masthead-title" href="#/">Follow the money to your campus</a>
+  <div class="masthead-left">
+    <button class="menu-button" id="menu-button" type="button" aria-expanded="false" aria-controls="site-menu">
+      <span class="menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="visually-hidden">Menu</span>
+    </button>
+    <a class="masthead-title" href="#/">Home</a>
+  </div>
   <p class="masthead-credit" id="credit"></p>
+  <nav class="site-menu" id="site-menu" aria-label="Site" hidden>
+    <ul>
+      <li><a href="#/" data-page="home">Home</a></li>
+      <li><a href="#/submit-an-error" data-page="error">Submit an error</a></li>
+    </ul>
+  </nav>
 </header>
 <main id="main" tabindex="-1">
   <p class="loading">Loading campaign finance data…</p>

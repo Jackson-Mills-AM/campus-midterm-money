@@ -180,8 +180,15 @@
       if (list.hidden || !items.length) return;
       if (ev.key === "ArrowDown") { ev.preventDefault(); highlight(Math.min(items.length - 1, active + 1)); }
       else if (ev.key === "ArrowUp") { ev.preventDefault(); highlight(Math.max(0, active - 1)); }
-      else if (ev.key === "Enter") { ev.preventDefault(); if (active >= 0) go(items[active]); }
       else if (ev.key === "Escape") { list.hidden = true; input.setAttribute("aria-expanded", "false"); }
+    });
+    // Pressing Enter (or "Go" on a phone keyboard) opens the highlighted match,
+    // or the best match if the suggestion list isn't showing.
+    root.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (list.hidden || active < 0) render();
+      if (items.length) go(items[active >= 0 ? active : 0]);
+      else input.focus();
     });
     list.addEventListener("mousedown", function (ev) {
       var li = ev.target.closest("li[data-i]");
@@ -205,12 +212,13 @@
 
     main.innerHTML =
       '<div class="ask">' +
-        '<label class="ask-label" for="q">Where do you go to school?</label>' +
-        '<p class="ask-sub">Find the U.S. House race at your California campus this November, who is paying for each campaign, and which outside groups are spending to sway it. You can also search any of the state\u2019s 52 districts by number or by a candidate\u2019s name.</p>' +
-        '<div class="search" role="combobox" aria-haspopup="listbox" aria-owns="results">' +
-          '<input id="q" type="text" autocomplete="off" spellcheck="false" placeholder="Type a school, like UCLA" aria-autocomplete="list" aria-controls="results" aria-expanded="false">' +
-          '<ul class="results" id="results" role="listbox" hidden></ul>' +
-        '</div>' +
+        '<h1 class="ask-label">Follow the money to your campus</h1>' +
+        '<p class="ask-sub">In the search bar below, type the name of your university, then press ENTER. You\u2019ll be brought to a page that shows what congressional district your university is in, who the candidates running in this election are and what money is being spent on them.</p>' +
+        '<form class="search" role="search" autocomplete="off">' +
+          '<label class="visually-hidden" for="q">Name of your university</label>' +
+          '<input id="q" type="text" role="combobox" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Type your university, like UCLA" aria-autocomplete="list" aria-controls="results" aria-expanded="false">' +
+          '<ul class="results" id="results" role="listbox" aria-label="Matching schools and districts" hidden></ul>' +
+        '</form>' +
       '</div>' +
       '<nav class="browse" aria-label="Browse campuses">' + browse + '</nav>' +
       districtGrid() +
@@ -228,7 +236,7 @@
       }).join("") + '</ul></section>';
   }
 
-  var raceSort = { key: "outside", dir: -1 };
+  var raceSort = { key: "district", dir: 1 };
   function racesSection() {
     return '<section class="section" id="races"><h2>All 52 California House races</h2>' +
       '<p class="dek">Campaign money is what the candidates raised. Outside money is what independent groups, such as super PACs, spent to support or oppose them. Select a column to sort.</p>' +
@@ -322,8 +330,8 @@
   }
 
   var TABS = [
-    ["topIndividuals", "Top individual donors"],
     ["topCommittees", "Top PACs and committees"],
+    ["topIndividuals", "Top individual donors"],
     ["topEmployers", "Where donors work"],
     ["outsideGroups", "Outside groups"]
   ];
@@ -355,26 +363,6 @@
       }
       return '<li><span class="who">' + esc(who) + '</span>' + amt + (sub ? '<span class="sub">' + esc(sub) + '</span>' : "") + '</li>';
     }).join("") + '</ol>';
-  }
-
-  function campusGivingSection(campus) {
-    var rows = (DATA.campusGiving[campus.id] || []);
-    var why = {
-      UC: "many employees write only “University of California” or leave the field vague.",
-      CSU: "many employees write only “California State University” or leave the field vague.",
-      Private: "some employees abbreviate the school’s name in ways that can’t be matched with confidence, or leave the field blank."
-    }[campus.system];
-    var head = '<section class="section"><h2>Where ' + esc(campus.name) + ' employees gave</h2>' +
-      '<p class="dek">Donations over $200 from people who listed ' + esc(campus.name) + ' as their employer, to any candidate in this tool. Treat these as minimums: ' + why + '</p>';
-    if (!rows.length) return head + '<p class="none">No donations from people listing this campus as their employer were found in these races.</p></section>';
-    return head + '<div class="table-wrap"><table class="giving"><thead><tr><th scope="col">Candidate</th><th scope="col">District</th><th scope="col" class="num">Amount</th><th scope="col" class="num">Donors</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var c = DATA.candidates[r.c];
-        var mine = c.district === campus.district;
-        return '<tr><td>' + candLabel(c) + (mine ? ' <strong>(this campus’s race)</strong>' : "") + '</td>' +
-          '<td><a href="#/district/' + c.district + '">' + ordinal(c.district) + '</a></td>' +
-          '<td class="num">' + money(r.a, true) + '</td><td class="num">' + r.d + '</td></tr>';
-      }).join("") + '</tbody></table></div></section>';
   }
 
   function renderRace(d, campus) {
@@ -428,9 +416,8 @@
         '<div class="tabs" role="tablist" aria-label="Donor lists">' + TABS.map(function (t, i) {
           return '<button type="button" role="tab" id="tab-' + t[0] + '" aria-controls="donor-panel" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" data-k="' + t[0] + '">' + t[1] + '</button>';
         }).join("") + '</div>' +
-        '<div id="donor-panel" role="tabpanel" aria-labelledby="tab-topIndividuals"></div>' +
-      '</section>' +
-      (campus ? campusGivingSection(campus) : "");
+        '<div id="donor-panel" role="tabpanel" aria-labelledby="tab-' + TABS[0][0] + '"></div>' +
+      '</section>';
 
     var panel = document.getElementById("donor-panel");
     function show(key) {
@@ -455,7 +442,7 @@
       if (focus) tabs[i].focus();
       show(tabs[i].getAttribute("data-k"));
     }
-    show("topIndividuals");
+    show(TABS[0][0]);
   }
 
   function renderNotFound() {
@@ -463,19 +450,70 @@
     main.innerHTML = '<a class="crumb" href="#/">All schools and districts</a><h1 class="ask-label">That page isn’t here.</h1><p class="ask-sub">Go back to the list of schools to find your campus.</p>';
   }
 
-  /* ------------------------------------------------------------ footer */
-  function renderFooter() {
+  /* ------------------------------------------------------------ about */
+  var FEC_LINK = '<a href="https://www.fec.gov/data/" target="_blank" rel="noopener">Federal Election Commission</a>';
+  function aboutHtml(headingTag) {
     var m = DATA.meta;
-    footer.innerHTML =
-      '<div class="about"><h2>About this data</h2>' +
-      '<p>Candidates are the two finalists certified by the California Secretary of State for the Nov. 3, 2026, general election. Districts follow the map voters approved with Proposition 50. Campuses were matched to the official Prop 50 district boundaries.</p>' +
-      '<p>Fundraising comes from reports filed with the Federal Election Commission and runs through ' + esc(longDate(m.moneyThroughMostly)) + ' for most campaigns (some through ' + esc(longDate(m.moneyThroughLatest)) + '). Outside spending is reported through ' + esc(longDate(m.outsideThrough)) + '. Donations made through ActBlue and WinRed are counted once, and quick 24- and 48-hour notices of outside spending are not double-counted against later full reports. Donors are named only when they give more than $200 in a cycle.</p>' +
-      '<p>Campus-employee totals rely on the employer donors write on their forms, so they undercount people who list only a university system or nothing at all.</p>' +
-      '</div>' +
-      '<div class="credits"><p>' + esc(m.credit) + '</p>' +
-      '<p>Spot an error? Email <a href="mailto:' + esc(m.corrections) + '">' + esc(m.corrections) + '</a>.</p>' +
-      '<p>Source: <a href="https://www.fec.gov/data/" target="_blank" rel="noopener">Federal Election Commission</a>, California Secretary of State. Data updated ' + esc(longDate(m.built)) + '.</p></div>';
-    document.getElementById("credit").textContent = m.credit;
+    var through = esc(longDate(m.moneyThroughMostly)) +
+      (m.moneyThroughLatest && m.moneyThroughLatest !== m.moneyThroughMostly
+        ? " (for some though, it runs through " + esc(longDate(m.moneyThroughLatest)) + ")" : "");
+    return '<' + headingTag + '>About this data</' + headingTag + '>' +
+      '<p>The candidates shown are the two finalists certified by the California Secretary of State for the general election on Nov. 3, 2026. The districts on this website follow the map put forward by Proposition 50.</p>' +
+      '<p>The data shown on this website was last updated on ' + esc(longDate(m.built)) + '. It comes from reports filed with the ' + FEC_LINK +
+        ' and runs through ' + through + '. Donations made through ActBlue and WinRed are counted once, and quick 24- and 48-hour notices of outside spending are not double-counted against later full reports.</p>' +
+      '<p>Source: ' + FEC_LINK + ', California Secretary of State.</p>' +
+      '<p>All data and reporting for the site was done by me (Jackson Mills). I used a Python script to query and collect all the campaign data for each district’s race, and then built and cleaned a dataset. Using this dataset, I inputted directions into Claude for what I wanted the website to look like, and Claude wrote the code. I put this code into GitHub, and here’s what we’ve got.</p>';
+  }
+  /* ------------------------------------------------------------ submit an error */
+  function renderErrorPage() {
+    document.title = "Submit an error | Follow the money to your campus";
+    var email = DATA.meta.corrections, signal = DATA.meta.signal;
+    main.innerHTML =
+      '<a class="crumb" href="#/">Back to home</a>' +
+      '<article class="page">' +
+        '<h1>Submit an error</h1>' +
+        '<p class="page-intro">See an error in the data and reporting on this website? Send me a message, and I’ll get it fixed ASAP. Please tell me which school or district page you were looking at and what looks wrong.</p>' +
+        '<dl class="contact-list">' +
+          '<div><dt>Email</dt><dd><a href="mailto:' + esc(email) + '?subject=' + encodeURIComponent("Error report: Follow the money to your campus") + '">' + esc(email) + '</a></dd></div>' +
+          '<div><dt>Signal</dt><dd>' + esc(signal) + '</dd></div>' +
+        '</dl>' +
+      '</article>';
+  }
+
+  /* ------------------------------------------------------------ footer */
+  function renderFooter(page) {
+    footer.innerHTML = '<div class="about">' + aboutHtml("h2") + '</div>';
+    document.getElementById("credit").textContent = DATA.meta.credit;
+  }
+
+  /* ------------------------------------------------------------ menu */
+  var menuBtn = document.getElementById("menu-button");
+  var menu = document.getElementById("site-menu");
+  function setMenu(open, returnFocus) {
+    menu.hidden = !open;
+    menuBtn.setAttribute("aria-expanded", String(open));
+    if (open) { var a = menu.querySelector("a"); if (a) a.focus(); }
+    else if (returnFocus) menuBtn.focus();
+    postHeight();
+  }
+  menuBtn.addEventListener("click", function () { setMenu(menu.hidden); });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape" && !menu.hidden) setMenu(false, true);
+  });
+  document.addEventListener("click", function (ev) {
+    if (!menu.hidden && !menu.contains(ev.target) && !menuBtn.contains(ev.target)) setMenu(false);
+  });
+  menu.addEventListener("click", function (ev) {
+    var a = ev.target.closest("a");
+    if (!a) return;
+    // Selecting the page you're already on should still close the menu.
+    if (a.getAttribute("href") === location.hash || (a.getAttribute("href") === "#/" && !location.hash)) setMenu(false, true);
+  });
+  function markMenu(page) {
+    Array.prototype.forEach.call(menu.querySelectorAll("a"), function (a) {
+      if (a.getAttribute("data-page") === page) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    });
   }
 
   /* ------------------------------------------------------------ router */
@@ -483,14 +521,22 @@
   function route() {
     var h = location.hash.replace(/^#\/?/, "");
     var parts = h.split("/");
+    var page = "home";
     if (parts[0] === "school" && parts[1]) {
       var c = campusById(parts[1]);
       if (c) renderRace(c.district, c); else renderNotFound();
+      page = "race";
     } else if (parts[0] === "district" && parts[1]) {
       renderRace(parseInt(parts[1], 10), null);
+      page = "race";
+    } else if (parts[0] === "submit-an-error") {
+      renderErrorPage(); page = "error";
     } else {
       renderHome();
     }
+    renderFooter(page);
+    markMenu(page);
+    if (!menu.hidden) setMenu(false);
     window.scrollTo(0, 0);
     if (h) main.focus({ preventScroll: true });
     postHeight();
@@ -500,7 +546,7 @@
 
   fetch("data/site-data.json", { cache: "no-cache" })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (d) { DATA = d; renderFooter(); route(); window.addEventListener("hashchange", route); })
+    .then(function (d) { DATA = d; route(); window.addEventListener("hashchange", route); })
     .catch(function () {
       main.innerHTML = '<p class="loading">The campaign finance data didn’t load. Refresh the page to try again.</p>';
     });

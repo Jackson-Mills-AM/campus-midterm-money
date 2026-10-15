@@ -73,16 +73,48 @@ p { margin: 0; }
 
 /* --------------------------------------------------------------- masthead */
 .masthead {
+  position: relative;
   border-top: 6px solid var(--brand);
-  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
-  gap: .25rem 1.5rem; padding-top: 1rem; padding-bottom: .75rem;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .25rem 1.5rem; padding-top: .7rem; padding-bottom: .6rem;
   border-bottom: 1px solid var(--rule);
 }
+.masthead-left { display: flex; align-items: center; gap: .6rem; }
 .masthead-title {
   color: var(--ink); text-decoration: none; font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em;
+  padding: .35rem 0;
 }
 .masthead-title:hover { color: var(--brand); }
 .masthead-credit { color: var(--muted); font-size: .875rem; }
+
+.menu-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.5rem; height: 2.5rem; margin-left: -.55rem;
+  background: none; border: 0; cursor: pointer; color: var(--ink);
+}
+.menu-button:hover { color: var(--brand); }
+.menu-icon { display: grid; gap: 4px; width: 20px; }
+.menu-icon span { display: block; height: 2px; background: currentColor; transition: transform .15s ease, opacity .15s ease; }
+.menu-button[aria-expanded="true"] .menu-icon span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.menu-button[aria-expanded="true"] .menu-icon span:nth-child(2) { opacity: 0; }
+.menu-button[aria-expanded="true"] .menu-icon span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.site-menu {
+  position: absolute; top: 100%; left: 0; z-index: 20;
+  min-width: 17rem; background: var(--paper);
+  border: 1px solid var(--rule); border-top: 3px solid var(--ink);
+  box-shadow: 0 14px 30px rgba(0,0,0,.12);
+}
+.site-menu[hidden] { display: none; }
+.site-menu ul { list-style: none; margin: 0; padding: .35rem 0; }
+.site-menu a {
+  display: block; padding: .75rem 1.25rem; color: var(--ink); text-decoration: none;
+  font-weight: 650; font-size: 1.05rem; border-left: 4px solid transparent;
+}
+.site-menu a:hover { background: var(--wash); color: var(--brand); }
+.site-menu a[aria-current="page"] { border-left-color: var(--brand); }
+@media (min-width: 48rem) { .site-menu { left: 1rem; } }
+@media (max-width: 30rem) { .site-menu { left: 0; right: 0; min-width: 0; } }
 
 main { padding-top: 2rem; padding-bottom: 3rem; outline: none; }
 #main:focus, #main:focus-visible { outline: none; }
@@ -91,7 +123,7 @@ main { padding-top: 2rem; padding-bottom: 3rem; outline: none; }
 /* ------------------------------------------------------------- home: ask */
 .ask { max-width: 52rem; }
 .ask-label {
-  display: block; font-weight: 800; letter-spacing: -.025em;
+  display: block; margin: 0; font-weight: 800; letter-spacing: -.025em;
   font-size: clamp(2.1rem, 6vw, 4rem); line-height: 1.02; margin-bottom: 1rem;
 }
 .ask-sub { font-family: var(--font-serif); font-size: 1.15rem; line-height: 1.55; color: var(--muted); max-width: 38rem; margin-bottom: 1.5rem; }
@@ -218,6 +250,16 @@ th button[aria-sort="ascending"]::after { border-bottom-color: var(--brand); mar
 .giving td.party { color: var(--muted); }
 .others { margin-top: .75rem; }
 
+/* ------------------------------------------------- about + error pages */
+.page { max-width: 42rem; }
+.page h1 { font-weight: 800; letter-spacing: -.025em; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.05; margin-bottom: 1rem; }
+.page-intro { font-family: var(--font-serif); font-size: 1.1rem; line-height: 1.65; }
+
+.contact-list { margin: 2rem 0 0; display: grid; gap: 1rem; border-top: 1px solid var(--rule); padding-top: 1.25rem; }
+.contact-list div { display: grid; grid-template-columns: 6rem 1fr; gap: 1rem; align-items: baseline; }
+.contact-list dt { font-weight: 700; }
+.contact-list dd { margin: 0; font-size: 1.15rem; }
+
 /* ----------------------------------------------------------------- footer */
 .footer { border-top: 1px solid var(--rule); padding-top: 1.5rem; padding-bottom: 3rem; color: var(--muted); font-size: .92rem; }
 .footer .about { font-family: var(--font-serif); max-width: 46rem; line-height: 1.6; color: var(--ink); }
@@ -232,3 +274,4 @@ th button[aria-sort="ascending"]::after { border-bottom-color: var(--brand); mar
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 @media print { .search, .tabs, .crumb { display: none; } }
+.footer:empty { display: none; }
