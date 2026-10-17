@@ -202,14 +202,17 @@
   /* ------------------------------------------------------------ home */
   function renderHome() {
     document.title = "Follow the money to your campus";
-    var groups = [["Private universities", "Private"], ["Cal State (CSU) campuses", "CSU"], ["University of California (UC) campuses", "UC"]];
+    var groups = [["Private universities", "Private"], ["Cal State (CSU) campuses", "CSU"], ["University of California (UC) campuses", "UC"],
+      ["Community colleges", "Community college"]];
     var browse = groups.map(function (g) {
       var list = DATA.campuses.filter(function (c) { return c.featured && c.system === g[1]; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
       return '<section><h2>' + esc(g[0]) + '</h2><ul>' + list.map(function (c) {
         return '<li><a href="#/school/' + esc(c.id) + '"><span class="b-name">' + esc(c.name) + '</span>' +
           '<span class="b-d">' + ordinal(c.district) + ' District</span></a></li>';
-      }).join("") + '</ul></section>';
+      }).join("") + '</ul>' +
+      (g[1] === "Community college" ? '<p class="b-more">These are the state\u2019s largest community colleges, each with more than 20,000 students. Use the search bar to find any of California\u2019s 115 community college campuses.</p>' : '') +
+      '</section>';
     }).join("");
 
     main.innerHTML =
