@@ -104,7 +104,7 @@
   /* ------------------------------------------------------------ search */
   function searchIndex() {
     return DATA.campuses.map(function (c) {
-      return { c: c, keys: [c.name, c.city].concat(c.aliases || []).map(norm) };
+      return { c: c, keys: [c.name].concat(c.aliases || []).map(norm), city: norm(c.city) };
     });
   }
   function score(entry, q) {
@@ -115,6 +115,8 @@
       else if ((" " + k).indexOf(" " + q) >= 0) best = Math.max(best, 60);
       else if (q.length >= 3 && k.indexOf(q) >= 0) best = Math.max(best, 40);
     });
+    // A matching city counts, but less than the school's own name.
+    if (entry.city && (entry.city === q || entry.city.indexOf(q) === 0)) best = Math.max(best, 30);
     return best;
   }
   var DISTRICT_Q = /^(?:ca|cd|california)?\s*(?:district|dist)?\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s*district)?$/;
@@ -136,22 +138,22 @@
       if (dm && DATA.races[+dm[1]]) items.push({ kind: "district", d: +dm[1] });
       idx.map(function (e) { return { e: e, s: score(e, q) }; })
         .filter(function (x) { return x.s > 0; })
-        .sort(function (a, b) { return b.s - a.s || a.e.c.name.localeCompare(b.e.c.name); })
-        .slice(0, 6).forEach(function (x) { items.push({ kind: "school", c: x.e.c }); });
+        .sort(function (a, b) { return b.s - a.s || (b.e.c.featured - a.e.c.featured) || a.e.c.name.localeCompare(b.e.c.name); })
+        .slice(0, 8).forEach(function (x) { items.push({ kind: "school", c: x.e.c }); });
       if (q.length >= 3) {
         cands.map(function (e) { return { e: e, s: score(e, q) }; })
           .filter(function (x) { return x.s >= 60; })
           .sort(function (a, b) { return b.s - a.s || a.e.c.name.localeCompare(b.e.c.name); })
           .slice(0, 4).forEach(function (x) { items.push({ kind: "candidate", c: x.e.c }); });
       }
-      items = items.slice(0, 9);
+      items = items.slice(0, 10);
       active = items.length ? 0 : -1;
       if (!items.length) {
         list.innerHTML = '<li class="r-none" role="option" aria-disabled="true">No match. Try a school\u2019s full name, a district number like 37, or a candidate\u2019s last name.</li>';
       } else {
         list.innerHTML = items.map(function (it, i) {
           var name, meta;
-          if (it.kind === "school") { name = it.c.name; meta = it.c.city; }
+          if (it.kind === "school") { name = it.c.name; meta = it.c.system === "Community college" ? "Community college, " + it.c.city : it.c.city; }
           else if (it.kind === "district") { name = districtName(it.d); meta = "District"; }
           else { name = it.c.name; meta = "Candidate, " + ordinal(it.c.district) + " District"; }
           return '<li role="option" id="opt-' + i + '" data-i="' + i + '" aria-selected="' + (i === active) + '">' +
@@ -202,7 +204,7 @@
     document.title = "Follow the money to your campus";
     var groups = [["Private universities", "Private"], ["Cal State (CSU) campuses", "CSU"], ["University of California (UC) campuses", "UC"]];
     var browse = groups.map(function (g) {
-      var list = DATA.campuses.filter(function (c) { return c.system === g[1]; })
+      var list = DATA.campuses.filter(function (c) { return c.featured && c.system === g[1]; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
       return '<section><h2>' + esc(g[0]) + '</h2><ul>' + list.map(function (c) {
         return '<li><a href="#/school/' + esc(c.id) + '"><span class="b-name">' + esc(c.name) + '</span>' +
@@ -216,7 +218,7 @@
         '<p class="ask-sub">In the search bar below, type the name of your university, then press ENTER. You\u2019ll be brought to a page that shows what congressional district your university is in, who the candidates running in this election are and what money is being spent on them.</p>' +
         '<form class="search" role="search" autocomplete="off">' +
           '<label class="visually-hidden" for="q">Name of your university</label>' +
-          '<input id="q" type="text" role="combobox" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Type your university, like UCLA" aria-autocomplete="list" aria-controls="results" aria-expanded="false">' +
+          '<input id="q" type="text" role="combobox" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Type your school, like UCLA or Santa Monica College" aria-autocomplete="list" aria-controls="results" aria-expanded="false">' +
           '<ul class="results" id="results" role="listbox" aria-label="Matching schools and districts" hidden></ul>' +
         '</form>' +
       '</div>' +
@@ -260,8 +262,8 @@
       th("campaign", "Campaign money", "num") + th("outside", "Outside money", "num") + '</tr></thead><tbody>' +
       rows.map(function (r) {
         var cs = r.candidates.map(function (id) { return DATA.candidates[id]; });
-        var camps = DATA.campuses.filter(function (c) { return c.district === r.district; });
-        var maybe = DATA.campuses.filter(function (c) { return c.alt === r.district; });
+        var camps = DATA.campuses.filter(function (c) { return c.featured && c.district === r.district; });
+        var maybe = DATA.campuses.filter(function (c) { return c.featured && c.confidence === "split" && c.alt === r.district; });
         var links = camps.map(function (c) { return '<a href="#/school/' + c.id + '">' + esc(c.name) + '</a>'; })
           .concat(maybe.map(function (c) { return '<a href="#/school/' + c.id + '">' + esc(c.name) + '</a> <span class="none">(part of campus)</span>'; }));
         return '<tr><td><a href="#/district/' + r.district + '">' + ordinal(r.district) + '</a></td>' +
@@ -378,6 +380,10 @@
 
     var notes = [];
     if (campus) notes.push('<p class="note"><strong>Registered to vote somewhere else?</strong> This is the race where the campus sits. If you vote at a home or off-campus address, your race may be different. Your sample ballot lists your congressional district, or you can check <a href="https://voterstatus.sos.ca.gov" target="_blank" rel="noopener">your voter status with the Secretary of State</a>.</p>');
+    if (campus && campus.confidence === "near_line" && campus.alt) {
+      notes.push('<p class="note verify"><strong>This campus is close to a district line.</strong> We placed ' + esc(campus.name) +
+        ' using its main address, which is in the ' + ordinal(d) + ' District, but part of the campus may be in the <a href="#/district/' + campus.alt + '">' + ordinal(campus.alt) + ' District</a>.</p>');
+    }
     if (campus && campus.confidence === "split") {
       notes.push('<p class="note verify"><strong>This campus spans two districts.</strong> ' + esc(campus.note) +
         (campus.alt ? ' <a href="#/district/' + campus.alt + '">See the ' + ordinal(campus.alt) + ' District race</a>.' : '') + '</p>');
@@ -387,9 +393,9 @@
     }
 
     var others = campusesIn(d).filter(function (c) { return !campus || c.id !== campus.id; });
-    var maybe = campus ? [] : DATA.campuses.filter(function (c) { return c.alt === d; });
+    var maybe = campus ? [] : DATA.campuses.filter(function (c) { return c.confidence === "split" && c.alt === d; });
     var othersHtml = (others.length
-      ? '<p class="others">' + (campus ? "Also in this district: " : "Campuses in this district: ") + others.map(function (c) { return '<a href="#/school/' + c.id + '">' + esc(c.name) + '</a>'; }).join(", ") + '</p>'
+      ? '<p class="others">' + (campus ? "Also in this district: " : "Schools in this district: ") + others.map(function (c) { return '<a href="#/school/' + c.id + '">' + esc(c.name) + '</a>'; }).join(", ") + '</p>'
       : "") + (maybe.length
       ? '<p class="others">Part of this campus is also in this district: ' + maybe.map(function (c) { return '<a href="#/school/' + c.id + '">' + esc(c.name) + '</a>'; }).join(", ") + '</p>'
       : "");
