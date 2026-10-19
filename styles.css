@@ -233,6 +233,8 @@ th button[aria-sort="ascending"]::after { border-bottom-color: var(--brand); mar
 .ob-bar { height: 14px; background: var(--wash); }
 .ob-bar span { display: block; height: 100%; }
 .ob-row .amt { text-align: right; font-weight: 700; }
+.lag { color: var(--muted); font-size: .85rem; line-height: 1.4; margin-top: .6rem; }
+.col-label + .lag { margin-top: .15rem; margin-bottom: .2rem; }
 .none { color: var(--muted); font-family: var(--font-serif); font-style: italic; }
 
 .list { list-style: none; padding: 0; margin: .5rem 0 0; counter-reset: rank; }

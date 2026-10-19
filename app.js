@@ -300,6 +300,17 @@
     ["other", "Other receipts", "--c-other"]
   ];
 
+  // The FEC posts each report's totals before it finishes processing the individual
+  // donations in it, so donor-level figures can run behind the totals.
+  function donorsLag(c) {
+    return c.donorsThrough && c.through && c.donorsThrough < c.through ? c.donorsThrough : "";
+  }
+  function lagNote(c) {
+    var d = donorsLag(c);
+    return d ? '<p class="lag">Named donors and the California share cover donations through ' + esc(longDate(d)) +
+      '. The FEC hasn\u2019t finished processing the donor details from later reports.</p>' : "";
+  }
+
   function moneyColumn(c, maxRaised) {
     var widthPct = maxRaised > 0 ? Math.max(2, (c.raised / maxRaised) * 100) : 0;
     var segs = PARTS.filter(function (p) { return c.parts[p[0]] > 0; });
@@ -316,7 +327,7 @@
           '<div><dt>Cash on hand</dt><dd>' + money(c.cash) + '</dd></div>' +
           '<div><dt>Named donors (over $200)</dt><dd>' + c.itemizedDonors.toLocaleString("en-US") + '</dd></div>' +
           '<div><dt>Share of named-donor money from California</dt><dd>' + (c.inState == null ? "—" : Math.round(c.inState * 100) + "%") + '</dd></div>' +
-        '</dl>'
+        '</dl>' + lagNote(c)
       : "";
     return '<div class="col">' +
       '<h3 class="cand-name">' + esc(c.name) + '</h3>' +
@@ -421,7 +432,7 @@
                         : '<p class="none">Outside groups have reported little or no spending in this race' + (maxOut > 0 ? ' (under $1,000 in total, such as website endorsements).' : '.') + '</p>') +
       '</section>' +
       '<section class="section"><h2>Who’s giving</h2>' +
-        '<p class="dek">Totals combine each donor’s contributions this cycle. Names, jobs and employers are as reported to the Federal Election Commission.</p>' +
+        '<p class="dek">Totals combine each donor’s contributions this cycle. Names, jobs and employers are as reported to the Federal Election Commission. Donor lists can run behind the campaign totals above, because the FEC posts a report’s totals before it finishes processing each donation in it.</p>' +
         '<div class="tabs" role="tablist" aria-label="Donor lists">' + TABS.map(function (t, i) {
           return '<button type="button" role="tab" id="tab-' + t[0] + '" aria-controls="donor-panel" aria-selected="' + (i === 0) + '" tabindex="' + (i === 0 ? 0 : -1) + '" data-k="' + t[0] + '">' + t[1] + '</button>';
         }).join("") + '</div>' +
@@ -432,7 +443,9 @@
     function show(key) {
       panel.setAttribute("aria-labelledby", "tab-" + key);
       panel.innerHTML = '<div class="duo">' + cs.map(function (c) {
-        return '<div class="col"><p class="col-label">' + esc(c.name) + ' <span class="p">(' + esc(partyShort(c.party)) + ')</span></p>' + listFor(c, key) + '</div>';
+        var lag = key !== "outsideGroups" && donorsLag(c);
+        return '<div class="col"><p class="col-label">' + esc(c.name) + ' <span class="p">(' + esc(partyShort(c.party)) + ')</span></p>' +
+          (lag ? '<p class="lag">Donations through ' + esc(longDate(lag)) + '</p>' : '') + listFor(c, key) + '</div>';
       }).join("") + '</div>';
     }
     var tabs = main.querySelectorAll('[role="tab"]');
