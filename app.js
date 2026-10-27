@@ -295,7 +295,7 @@
     ["small", "Individuals giving $200 or less", "--c-small"],
     ["pac", "PACs and other committees", "--c-pac"],
     ["party", "Party committees", "--c-party"],
-    ["self", "Candidate’s own money", "--c-self"],
+    ["self", "Candidate’s own money (incl. loans)", "--c-self"],
     ["transfers", "Transfers from joint fundraising", "--c-other"],
     ["other", "Other receipts", "--c-other"]
   ];
